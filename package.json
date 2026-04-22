@@ -1,0 +1,52 @@
+{
+        "name": "cloudformation-lens",
+        "displayName": "CloudFormation Lens",
+        "description": "CloudFormation language support for VS Code",
+        "version": "0.0.1",
+        "engines": {
+                "vscode": "^1.95.0"
+        },
+        "categories": [
+                "Languages"
+        ],
+        "activationEvents": [
+                "onLanguage:yaml"
+        ],
+        "main": "./out/extension.js",
+        "contributes": {
+                "languages": [
+                        {
+                                "id": "cloudformation",
+                                "aliases": [
+                                        "CloudFormation",
+                                        "cfn"
+                                ],
+                                "extensions": [],
+                                "configuration": "./language-configuration.json"
+                        }
+                ],
+                "grammars": [
+                        {
+                                "language": "cloudformation",
+                                "scopeName": "source.cloudformation",
+                                "path": "./syntaxes/cloudformation.tmLanguage.json"
+                        }
+                ]
+        },
+        "scripts": {
+                "compile": "tsc -p ./",
+                "watch": "tsc -watch -p ./",
+                "fetch-schema": "ts-node scripts/fetch-schema.ts"
+        },
+        "devDependencies": {
+                "@types/adm-zip": "^0.5.8",
+                "@types/node": "^22.19.17",
+                "@types/vscode": "^1.95.0",
+                "adm-zip": "^0.5.17",
+                "ts-node": "^10.9.2",
+                "typescript": "^5.8.0"
+        },
+        "dependencies": {
+                "yaml": "^2.8.3"
+        }
+}

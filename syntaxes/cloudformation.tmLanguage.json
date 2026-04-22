@@ -1,0 +1,39 @@
+{
+        "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+        "name": "CloudFormation",
+        "scopeName": "source.cloudformation",
+        "patterns": [
+                { "include": "#comment" },
+                { "include": "#intrinsic" },
+                { "include": "#string" },
+                { "include": "#number" },
+                { "include": "#boolean" },
+                { "include": "#key" }
+        ],
+        "repository": {
+                "comment": {
+                        "match": "#.*$",
+                        "name": "comment.line.number-sign.cloudformation"
+                },
+                "intrinsic": {
+                        "match": "!(Ref|Sub|GetAtt|ImportValue|If|Join|Select|Split|FindInMap|Base64|Cidr|And|Or|Not|Equals|Transform)\\b",
+                        "name": "keyword.control.cloudformation"
+                },
+                "string": {
+                        "match": "\"[^\"]*\"",
+                        "name": "string.quoted.double.cloudformation"
+                },
+                "number": {
+                        "match": "\\b[0-9]+(\\.[0-9]+)?\\b",
+                        "name": "constant.numeric.cloudformation"
+                },
+                "boolean": {
+                        "match": "\\b(true|false|null)\\b",
+                        "name": "constant.language.cloudformation"
+                },
+                "key": {
+                        "match": "^\\s*[a-zA-Z0-9_]+(?=\\s*:)",
+                        "name": "entity.name.tag.cloudformation"
+                }
+        }
+}
