@@ -2,8 +2,6 @@ import * as vscode from "vscode";
 import { parseTemplate } from "../parser/template";
 import { resources } from "../data/resources";
 
-// These are always valid !Ref targets even though they're
-// not defined anywhere in the template
 const PSEUDO_PARAMETERS = [
         "AWS::AccountId",
         "AWS::NotificationARNs",
@@ -38,6 +36,7 @@ export class CfnDiagnosticsProvider {
 
                 const template = parseTemplate(document);
                 const diagnostics: vscode.Diagnostic[] = [];
+                const text = document.getText();
 
                 // --- Missing required properties ---
                 for (const [logicalId, resource] of Object.entries(template.resources)) {
@@ -73,23 +72,19 @@ export class CfnDiagnosticsProvider {
                 }
 
                 // --- Invalid !Ref targets ---
-                // Build a set of all valid !Ref targets
                 const validRefTargets = new Set<string>([
                         ...Object.keys(template.resources),
                         ...template.parameters,
                         ...PSEUDO_PARAMETERS,
                 ]);
 
-                const text = document.getText();
                 const refRegex = /!\s*Ref\s+(\S+)/g;
                 let match;
 
                 while ((match = refRegex.exec(text)) !== null) {
                         const refTarget = match[1];
-
                         if (validRefTargets.has(refTarget)) continue;
 
-                        // Convert the character offset to a position
                         const targetStart = match.index + match[0].indexOf(refTarget);
                         const startPos = document.positionAt(targetStart);
                         const endPos = document.positionAt(targetStart + refTarget.length);
@@ -102,6 +97,56 @@ export class CfnDiagnosticsProvider {
                         );
                         diagnostic.source = "CloudFormation Lens";
                         diagnostics.push(diagnostic);
+                }
+
+                // --- Invalid !GetAtt targets ---
+                const getAttRegex = /!\s*GetAtt\s+([\w]+)\.([\w]+)/g;
+
+                while ((match = getAttRegex.exec(text)) !== null) {
+                        const logicalId = match[1];
+                        const attribute = match[2];
+
+                        const resource = template.resources[logicalId];
+
+                        if (!resource) {
+                                // Resource doesn't exist
+                                const targetStart = match.index + match[0].indexOf(logicalId);
+                                const startPos = document.positionAt(targetStart);
+                                const endPos = document.positionAt(
+                                        targetStart + logicalId.length,
+                                );
+                                const range = new vscode.Range(startPos, endPos);
+
+                                const diagnostic = new vscode.Diagnostic(
+                                        range,
+                                        `"${logicalId}" is not a valid !GetAtt target. No resource with this name exists in the template.`,
+                                        vscode.DiagnosticSeverity.Warning,
+                                );
+                                diagnostic.source = "CloudFormation Lens";
+                                diagnostics.push(diagnostic);
+                                continue;
+                        }
+
+                        // Resource exists — check if the attribute is valid
+                        const resourceDef = resources[resource.type];
+                        if (!resourceDef) continue;
+
+                        if (!resourceDef.attributes.includes(attribute)) {
+                                const attrStart = match.index + match[0].indexOf(attribute);
+                                const startPos = document.positionAt(attrStart);
+                                const endPos = document.positionAt(
+                                        attrStart + attribute.length,
+                                );
+                                const range = new vscode.Range(startPos, endPos);
+
+                                const diagnostic = new vscode.Diagnostic(
+                                        range,
+                                        `"${attribute}" is not a valid attribute of ${logicalId} (${resource.type}). Available attributes: ${resourceDef.attributes.join(", ") || "none"}`,
+                                        vscode.DiagnosticSeverity.Warning,
+                                );
+                                diagnostic.source = "CloudFormation Lens";
+                                diagnostics.push(diagnostic);
+                        }
                 }
 
                 this.collection.set(document.uri, diagnostics);
