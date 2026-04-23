@@ -33,6 +33,11 @@
                         }
                 ]
         },
+        "publisher": "Robert076",
+        "repository": {
+                "type": "git",
+                "url": "https://github.com/Robert076/cloudformation-lens"
+        },
         "scripts": {
                 "compile": "tsc -p ./",
                 "watch": "tsc -watch -p ./",
