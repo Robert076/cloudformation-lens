@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import { CfnCompletionProvider } from "./providers/completion";
 import { CfnDiagnosticsProvider } from "./providers/diagnostics";
 import { CfnHoverProvider } from "./providers/hover";
+import { CfnDefinitionProvider } from "./providers/definition";
 
 function isCfnTemplate(document: vscode.TextDocument): boolean {
         const text = document.getText();
@@ -44,6 +45,12 @@ export function activate(context: vscode.ExtensionContext) {
         // Register diagnostics provider
         const diagnosticsProvider = new CfnDiagnosticsProvider();
 
+        // Register definitions provider (takes you to where something is defined)
+        const definitionProvider = vscode.languages.registerDefinitionProvider(
+                selector,
+                new CfnDefinitionProvider(),
+        );
+
         const hoverProvider = vscode.languages.registerHoverProvider(
                 selector,
                 new CfnHoverProvider(),
@@ -63,6 +70,7 @@ export function activate(context: vscode.ExtensionContext) {
                 onChange,
                 diagnosticsProvider,
                 hoverProvider,
+                definitionProvider,
         );
 }
 
