@@ -109,7 +109,6 @@ export class CfnDiagnosticsProvider {
                         const resource = template.resources[logicalId];
 
                         if (!resource) {
-                                // Resource doesn't exist
                                 const targetStart = match.index + match[0].indexOf(logicalId);
                                 const startPos = document.positionAt(targetStart);
                                 const endPos = document.positionAt(
@@ -127,7 +126,6 @@ export class CfnDiagnosticsProvider {
                                 continue;
                         }
 
-                        // Resource exists — check if the attribute is valid
                         const resourceDef = resources[resource.type];
                         if (!resourceDef) continue;
 
@@ -142,6 +140,41 @@ export class CfnDiagnosticsProvider {
                                 const diagnostic = new vscode.Diagnostic(
                                         range,
                                         `"${attribute}" is not a valid attribute of ${logicalId} (${resource.type}). Available attributes: ${resourceDef.attributes.join(", ") || "none"}`,
+                                        vscode.DiagnosticSeverity.Warning,
+                                );
+                                diagnostic.source = "CloudFormation Lens";
+                                diagnostics.push(diagnostic);
+                        }
+                }
+
+                // --- Invalid !Sub variable references ---
+                const subRegex = /!\s*Sub\s+['"]?(.*?)['"]?\s*$/gm;
+
+                while ((match = subRegex.exec(text)) !== null) {
+                        const subString = match[1];
+                        const subStringStart = match.index + match[0].indexOf(subString);
+
+                        // Find all ${VarName} inside the !Sub string
+                        const varRegex = /\$\{([\w:]+)\}/g;
+                        let varMatch;
+
+                        while ((varMatch = varRegex.exec(subString)) !== null) {
+                                const varName = varMatch[1];
+
+                                // Skip if it's a valid target
+                                if (validRefTargets.has(varName)) continue;
+
+                                // Skip GetAtt-style references like ${MyBucket.Arn}
+                                if (varName.includes(".")) continue;
+
+                                const varStart = subStringStart + varMatch.index + 2; // +2 for ${
+                                const startPos = document.positionAt(varStart);
+                                const endPos = document.positionAt(varStart + varName.length);
+                                const range = new vscode.Range(startPos, endPos);
+
+                                const diagnostic = new vscode.Diagnostic(
+                                        range,
+                                        `"\${${varName}}" is not a valid !Sub variable. No resource, parameter, or pseudo-parameter with this name exists.`,
                                         vscode.DiagnosticSeverity.Warning,
                                 );
                                 diagnostic.source = "CloudFormation Lens";

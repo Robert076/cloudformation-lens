@@ -38,6 +38,7 @@ export function activate(context: vscode.ExtensionContext) {
                 ".",
                 ":",
                 " ",
+                "$",
         );
 
         // Register diagnostics provider

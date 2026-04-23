@@ -2,6 +2,17 @@ import * as vscode from "vscode";
 import { parseTemplate } from "../parser/template";
 import { resources } from "../data/resources";
 
+const PSEUDO_PARAMETERS = [
+        "AWS::AccountId",
+        "AWS::NotificationARNs",
+        "AWS::NoValue",
+        "AWS::Partition",
+        "AWS::Region",
+        "AWS::StackId",
+        "AWS::StackName",
+        "AWS::URLSuffix",
+];
+
 export class CfnCompletionProvider implements vscode.CompletionItemProvider {
         provideCompletionItems(
                 document: vscode.TextDocument,
@@ -31,7 +42,12 @@ export class CfnCompletionProvider implements vscode.CompletionItemProvider {
                         return this.getImportValueCompletions(document);
                 }
 
-                // Context 5: Properties inside a resource block
+                // Context 5: !Sub variable interpolation
+                if (linePrefix.match(/!\s*Sub\s+.*\$\{[\w:]*$/)) {
+                        return this.getSubCompletions(document, linePrefix, position);
+                }
+
+                // Context 6: Properties inside a resource block
                 const propertyCompletions = this.getPropertyCompletions(document, position);
                 if (propertyCompletions.length > 0) {
                         return propertyCompletions;
@@ -80,7 +96,6 @@ export class CfnCompletionProvider implements vscode.CompletionItemProvider {
                 const dotMatch = linePrefix.match(/!\s*GetAtt\s+([\w]+)\.([\w]*)$/);
 
                 if (dotMatch) {
-                        // Stage 2 — show attributes for the selected resource
                         const logicalId = dotMatch[1];
                         const resourceType = template.resources[logicalId]?.type;
                         if (!resourceType) return [];
@@ -110,7 +125,6 @@ export class CfnCompletionProvider implements vscode.CompletionItemProvider {
                                 items.push(item);
                         }
                 } else {
-                        // Stage 1 — show all resource logical IDs
                         const noDotMatch = linePrefix.match(/!\s*GetAtt\s+([\w]*)$/);
                         const typed = noDotMatch ? noDotMatch[1] : "";
                         const startChar = position.character - typed.length;
@@ -138,6 +152,65 @@ export class CfnCompletionProvider implements vscode.CompletionItemProvider {
                                 };
                                 items.push(item);
                         }
+                }
+
+                return items;
+        }
+
+        // --- !Sub variable completions ---
+        private getSubCompletions(
+                document: vscode.TextDocument,
+                linePrefix: string,
+                position: vscode.Position,
+        ): vscode.CompletionItem[] {
+                const template = parseTemplate(document);
+                const items: vscode.CompletionItem[] = [];
+
+                // Figure out what's been typed after ${
+                const subMatch = linePrefix.match(/\$\{([\w:]*)$/);
+                const typed = subMatch ? subMatch[1] : "";
+                const startChar = position.character - typed.length;
+                const range = new vscode.Range(
+                        position.line,
+                        startChar,
+                        position.line,
+                        position.character,
+                );
+
+                // Resources
+                for (const [logicalId, resource] of Object.entries(template.resources)) {
+                        const item = new vscode.CompletionItem(
+                                logicalId,
+                                vscode.CompletionItemKind.Reference,
+                        );
+                        item.detail = resource.type;
+                        item.documentation = `Reference to ${logicalId} (${resource.type})`;
+                        item.range = range;
+                        items.push(item);
+                }
+
+                // Parameters
+                for (const paramName of template.parameters) {
+                        const item = new vscode.CompletionItem(
+                                paramName,
+                                vscode.CompletionItemKind.Variable,
+                        );
+                        item.detail = "Parameter";
+                        item.documentation = `Reference to the ${paramName} parameter`;
+                        item.range = range;
+                        items.push(item);
+                }
+
+                // Pseudo-parameters
+                for (const pseudo of PSEUDO_PARAMETERS) {
+                        const item = new vscode.CompletionItem(
+                                pseudo,
+                                vscode.CompletionItemKind.Constant,
+                        );
+                        item.detail = "Pseudo-parameter";
+                        item.documentation = `AWS pseudo-parameter ${pseudo}`;
+                        item.range = range;
+                        items.push(item);
                 }
 
                 return items;
@@ -224,7 +297,6 @@ export class CfnCompletionProvider implements vscode.CompletionItemProvider {
                 return items;
         }
 
-        // Walk upward from the cursor to find what resource type we're inside
         private findParentResourceType(
                 document: vscode.TextDocument,
                 position: vscode.Position,
