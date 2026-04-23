@@ -72,8 +72,7 @@ npm run fetch-schema
 
 Issues and PRs are welcome at [github.com/Robert076/cloudformation-lens](https://github.com/Robert076/cloudformation-lens).
 
-If something doesn't work the way you'd expect, open an issue with your template snippet and what you expected to happen.
-
+If something doesn't work the way you'd expect, go ahead and fix it, it's open source.
 ---
 
 ## License
