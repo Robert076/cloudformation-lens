@@ -2,7 +2,7 @@
         "name": "cloudformation-lens",
         "displayName": "CloudFormation Lens",
         "description": "CloudFormation language support for VS Code",
-        "version": "0.0.1",
+        "version": "0.0.2",
         "engines": {
                 "vscode": "^1.95.0"
         },
@@ -33,6 +33,7 @@
                         }
                 ]
         },
+        "icon": "logo.png",
         "publisher": "Robert076",
         "repository": {
                 "type": "git",
@@ -52,6 +53,7 @@
                 "typescript": "^5.8.0"
         },
         "dependencies": {
+                "@vscode/vsce": "^3.9.1",
                 "yaml": "^2.8.3"
         }
 }
